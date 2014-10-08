@@ -1,0 +1,35 @@
+{
+	"name":"cliffparnitzky/vis.js",
+	"description":"Integrate vis.js, the dynamic, browser based visualization library, into Contao.",
+	"keywords":["contao", "vis.js", "diagram", "chart", "timeline"],
+	"type":"contao-module",
+	"license":"LGPL-3.0+",
+	"authors":[
+		{
+			"name":"Cliff Parnitzky",
+			"email":"contao@cliff-parnitzky.de",
+			"role":"Developer"
+		}
+	],
+	"support":{
+		"email":"contao@cliff-parnitzky.de",
+		"issues":"https://github.com/cliffparnitzky/vis.js/issues",
+		"source":"https://github.com/cliffparnitzky/vis.js"
+	},
+	"require":{
+		"php":">=5.3",
+		"contao/core":">=3.0.0,<4.0.0-dev",
+		"contao-community-alliance/composer-installer":"*"
+	},
+	"extra":{
+		"contao":{
+			"sources":{
+				"assets/vis.js":"assets/vis.js",
+				"system/config":"system/config"
+			}
+		},
+		"branch-alias": {
+			"dev-master": "1.0.x-dev"
+		}
+	}
+}
