@@ -1,3 +1,7 @@
+[![Latest Version on Packagist](http://img.shields.io/packagist/v/cliffparnitzky/vis.js.svg?style=flat)](https://packagist.org/packages/cliffparnitzky/vis.js)
+[![Installations via composer per month](http://img.shields.io/packagist/dm/cliffparnitzky/vis.js.svg?style=flat)](https://packagist.org/packages/cliffparnitzky/vis.js)
+[![Installations via composer total](http://img.shields.io/packagist/dt/cliffparnitzky/vis.js.svg?style=flat)](https://packagist.org/packages/cliffparnitzky/vis.js)
+
 Contao Extension: vis.js
 ========================
 
@@ -9,9 +13,9 @@ For more infos see: http://visjs.org
 Installation
 ------------
 
-The extension can be installed using the Contao extension manager in the Contao backend.
+The extension is not published in contao extension repository.
 
-Or install it via [composer](https://packagist.org/packages/cliffparnitzky/vis.js).
+Install it manually or via composer: [cliffparnitzky/vis.js](https://packagist.org/packages/cliffparnitzky/vis.js).
 
 If you prefer to install it manually, download the latest release here: https://github.com/cliffparnitzky/vis.js/releases
 
@@ -26,7 +30,7 @@ Compatibility
 -------------
 
 - min. version: Contao 3.0.0
-- max. version: Contao 3.3.x
+- max. version: Contao 3.4.x
 
 
 Dependency
