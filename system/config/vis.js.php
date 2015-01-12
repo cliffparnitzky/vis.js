@@ -3,7 +3,7 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2014 Leo Feyer
+ * Copyright (c) 2005-2015 Leo Feyer
  *
  * @package vis.js
  * @link    https://contao.org
@@ -13,6 +13,6 @@
 /**
  * Plugin version
  */
-define('VIS_JS', '3.7.2');
+define('VIS_JS', '3.8.0');
 
 ?>
