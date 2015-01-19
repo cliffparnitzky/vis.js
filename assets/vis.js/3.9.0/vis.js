@@ -4,8 +4,8 @@
  *
  * A dynamic, browser-based visualization library.
  *
- * @version 3.8.0
- * @date    2015-01-09
+ * @version 3.9.0
+ * @date    2015-01-16
  *
  * @license
  * Copyright (C) 2011-2014 Almende B.V, http://almende.com
@@ -899,48 +899,36 @@ return /******/ (function(modules) { // webpackBootstrap
     return value || defaultValue || null;
   };
 
-
-
-  exports.GiveDec = function(Hex) {
-    var Value;
-
-    if (Hex == "A")
-      Value = 10;
-    else if (Hex == "B")
-      Value = 11;
-    else if (Hex == "C")
-      Value = 12;
-    else if (Hex == "D")
-      Value = 13;
-    else if (Hex == "E")
-      Value = 14;
-    else if (Hex == "F")
-      Value = 15;
-    else
-      Value = eval(Hex);
-
-    return Value;
+  /**
+   * http://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
+   *
+   * @param {String} hex
+   * @returns {{r: *, g: *, b: *}} | 255 range
+   */
+  exports.hexToRGB = function(hex) {
+    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+    var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+        return r + r + g + g + b + b;
+    });
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
   };
 
-  exports.GiveHex = function(Dec) {
-    var Value;
-
-    if(Dec == 10)
-      Value = "A";
-    else if (Dec == 11)
-      Value = "B";
-    else if (Dec == 12)
-      Value = "C";
-    else if (Dec == 13)
-      Value = "D";
-    else if (Dec == 14)
-      Value = "E";
-    else if (Dec == 15)
-      Value = "F";
-    else
-      Value = "" + Dec;
-
-    return Value;
+  /**
+   *
+   * @param red     0 -- 255
+   * @param green   0 -- 255
+   * @param blue    0 -- 255
+   * @returns {string}
+   * @constructor
+   */
+  exports.RGBToHex = function(red,green,blue) {
+    return "#" + ((1 << 24) + (red << 16) + (green << 8) + blue).toString(16).slice(1);
   };
 
   /**
@@ -1023,42 +1011,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
     return c;
   };
-
-  /**
-   * http://www.yellowpipe.com/yis/tools/hex-to-rgb/color-converter.php
-   *
-   * @param {String} hex
-   * @returns {{r: *, g: *, b: *}}
-   */
-  exports.hexToRGB = function(hex) {
-    hex = hex.replace("#","").toUpperCase();
-
-    var a = exports.GiveDec(hex.substring(0, 1));
-    var b = exports.GiveDec(hex.substring(1, 2));
-    var c = exports.GiveDec(hex.substring(2, 3));
-    var d = exports.GiveDec(hex.substring(3, 4));
-    var e = exports.GiveDec(hex.substring(4, 5));
-    var f = exports.GiveDec(hex.substring(5, 6));
-
-    var r = (a * 16) + b;
-    var g = (c * 16) + d;
-    var b = (e * 16) + f;
-
-    return {r:r,g:g,b:b};
-  };
-
-  exports.RGBToHex = function(red,green,blue) {
-    var a = exports.GiveHex(Math.floor(red / 16));
-    var b = exports.GiveHex(red % 16);
-    var c = exports.GiveHex(Math.floor(green / 16));
-    var d = exports.GiveHex(green % 16);
-    var e = exports.GiveHex(Math.floor(blue / 16));
-    var f = exports.GiveHex(blue % 16);
-
-    var hex = a + b + c + d + e + f;
-    return "#" + hex;
-  };
-
 
   /**
    * http://www.javascripter.net/faq/rgb2hsv.htm
@@ -7824,9 +7776,13 @@ return /******/ (function(modules) { // webpackBootstrap
    *                                               If animate is a number, the
    *                                               number is taken as duration
    *                                               Default duration is 500 ms.
+   * @param {Boolean} [byUser=false]
    *
    */
-  Range.prototype.setRange = function(start, end, animate) {
+  Range.prototype.setRange = function(start, end, animate, byUser) {
+    if (byUser !== true) {
+      byUser = false;
+    }
     var _start = start != undefined ? util.convert(start, 'Date').valueOf() : null;
     var _end   = end != undefined   ? util.convert(end, 'Date').valueOf()   : null;
     this._cancelAnimation();
@@ -7851,12 +7807,12 @@ return /******/ (function(modules) { // webpackBootstrap
           DateUtil.updateHiddenDates(me.body, me.options.hiddenDates);
           anyChanged = anyChanged || changed;
           if (changed) {
-            me.body.emitter.emit('rangechange', {start: new Date(me.start), end: new Date(me.end)});
+            me.body.emitter.emit('rangechange', {start: new Date(me.start), end: new Date(me.end), byUser:byUser});
           }
 
           if (done) {
             if (anyChanged) {
-              me.body.emitter.emit('rangechanged', {start: new Date(me.start), end: new Date(me.end)});
+              me.body.emitter.emit('rangechanged', {start: new Date(me.start), end: new Date(me.end), byUser:byUser});
             }
           }
           else {
@@ -7873,7 +7829,7 @@ return /******/ (function(modules) { // webpackBootstrap
       var changed = this._applyRange(_start, _end);
       DateUtil.updateHiddenDates(this.body, this.options.hiddenDates);
       if (changed) {
-        var params = {start: new Date(this.start), end: new Date(this.end)};
+        var params = {start: new Date(this.start), end: new Date(this.end), byUser:byUser};
         this.body.emitter.emit('rangechange', params);
         this.body.emitter.emit('rangechanged', params);
       }
@@ -8124,7 +8080,8 @@ return /******/ (function(modules) { // webpackBootstrap
     // fire a rangechange event
     this.body.emitter.emit('rangechange', {
       start: new Date(this.start),
-      end:   new Date(this.end)
+      end:   new Date(this.end),
+      byUser: true
     });
   };
 
@@ -8149,7 +8106,8 @@ return /******/ (function(modules) { // webpackBootstrap
     // fire a rangechanged event
     this.body.emitter.emit('rangechanged', {
       start: new Date(this.start),
-      end:   new Date(this.end)
+      end:   new Date(this.end),
+      byUser: true
     });
   };
 
@@ -8264,7 +8222,7 @@ return /******/ (function(modules) { // webpackBootstrap
         newEnd = safeEnd;
       }
 
-      this.setRange(newStart, newEnd);
+      this.setRange(newStart, newEnd, false, true);
 
       this.startToFront = false; // revert to default
       this.endToFront = true; // revert to default
@@ -8341,7 +8299,7 @@ return /******/ (function(modules) { // webpackBootstrap
       newEnd = safeEnd;
     }
 
-    this.setRange(newStart, newEnd);
+    this.setRange(newStart, newEnd, false, true);
 
     this.startToFront = false; // revert to default
     this.endToFront = true; // revert to default
@@ -15518,6 +15476,8 @@ return /******/ (function(modules) { // webpackBootstrap
         fontSize: 14, // px
         fontFace: 'verdana',
         fontFill: undefined,
+        fontStrokeWidth: 0, // px
+        fontStrokeColor: 'white',
         level: -1,
         color: {
             border: '#2B7CE9',
@@ -15551,6 +15511,9 @@ return /******/ (function(modules) { // webpackBootstrap
         fontSize: 14, // px
         fontFace: 'arial',
         fontFill: 'white',
+        fontStrokeWidth: 0, // px
+        fontStrokeColor: 'white',
+        labelAlignment:'horizontal',
         arrowScaleFactor: 1,
         dash: {
           length: 10,
@@ -15994,6 +15957,11 @@ return /******/ (function(modules) { // webpackBootstrap
           ' parameter pair "nodes" and "edges", but not both.');
     }
 
+    // clean up in case there is anyone in an active mode of the manipulation. This is the same option as bound to the escape button.
+    if (this.constants.dataManipulation.enabled == true) {
+      this._createManipulatorBar();
+    }
+
     // set options
     this.setOptions(data && data.options);
     // set all data
@@ -16158,6 +16126,7 @@ return /******/ (function(modules) { // webpackBootstrap
       if (options.labels) {
         throw new Error('Option "labels" is deprecated. Use options "locale" and "locales" instead.');
       }
+
 
       // (Re)loading the mixins that can be enabled or disabled in the options.
       // load the force calculation functions, grouped under the physics system.
@@ -16326,17 +16295,15 @@ return /******/ (function(modules) { // webpackBootstrap
     // clear events
     this.off();
 
-    // remove all elements from the container element.
-    while (this.frame.hasChildNodes()) {
-      this.frame.removeChild(this.frame.firstChild);
-    }
-
-    // remove all elements from the container element.
-    while (this.containerElement.hasChildNodes()) {
-      this.containerElement.removeChild(this.containerElement.firstChild);
-    }
+    this._recursiveDOMDelete(this.containerElement);
   }
 
+  Network.prototype._recursiveDOMDelete = function(DOMobject) {
+    while (DOMobject.hasChildNodes() == true) {
+      this._recursiveDOMDelete(DOMobject.firstChild);
+      DOMobject.removeChild(DOMobject.firstChild);
+    }
+  }
 
   /**
    * Get the pointer location from a touch location
@@ -16373,8 +16340,8 @@ return /******/ (function(modules) { // webpackBootstrap
    * handle drag start event
    * @private
    */
-  Network.prototype._onDragStart = function () {
-    this._handleDragStart();
+  Network.prototype._onDragStart = function (event) {
+    this._handleDragStart(event);
   };
 
 
@@ -16384,20 +16351,24 @@ return /******/ (function(modules) { // webpackBootstrap
    *
    * @private
    */
-  Network.prototype._handleDragStart = function() {
-    var drag = this.drag;
-    var node = this._getNodeAt(drag.pointer);
+  Network.prototype._handleDragStart = function(event) {
+    // in case the touch event was triggered on an external div, do the initial touch now.
+    if (this.drag.pointer === undefined) {
+      this._onTouch(event);
+    }
+
+    var node = this._getNodeAt(this.drag.pointer);
     // note: drag.pointer is set in _onTouch to get the initial touch location
 
-    drag.dragging = true;
-    drag.selection = [];
-    drag.translation = this._getTranslation();
-    drag.nodeId = null;
+    this.drag.dragging = true;
+    this.drag.selection = [];
+    this.drag.translation = this._getTranslation();
+    this.drag.nodeId = null;
     this.draggingNodes = false;
 
     if (node != null && this.constants.dragNodes == true) {
       this.draggingNodes = true;
-      drag.nodeId = node.id;
+      this.drag.nodeId = node.id;
       // select the clicked node if not yet selected
       if (!node.isSelected()) {
         this._selectObject(node,false);
@@ -16423,7 +16394,7 @@ return /******/ (function(modules) { // webpackBootstrap
           object.xFixed = true;
           object.yFixed = true;
 
-          drag.selection.push(s);
+          this.drag.selection.push(s);
         }
       }
     }
@@ -16483,8 +16454,13 @@ return /******/ (function(modules) { // webpackBootstrap
       }
     }
     else {
+      // move the network
       if (this.constants.dragNetwork == true) {
-        // move the network
+        // if the drag was not started properly because the click started outside the network div, start it now.
+        if (this.drag.pointer === undefined) {
+          this._handleDragStart(event);
+          return;
+        }
         var diffX = pointer.x - this.drag.pointer.x;
         var diffY = pointer.y - this.drag.pointer.y;
 
@@ -16493,8 +16469,6 @@ return /******/ (function(modules) { // webpackBootstrap
           this.drag.translation.y + diffY
         );
         this._redraw();
-  //      this.moving = true;
-  //      this.start();
       }
     }
   };
@@ -16777,33 +16751,43 @@ return /******/ (function(modules) { // webpackBootstrap
     if (this.popupObj == undefined) {
       // search the nodes for overlap, select the top one in case of multiple nodes
       var nodes = this.nodes;
+      var overlappingNodes = [];
       for (id in nodes) {
         if (nodes.hasOwnProperty(id)) {
           var node = nodes[id];
           if (node.isOverlappingWith(obj)) {
             if (node.getTitle() !== undefined) {
-              this.popupObj = node;
-              break;
+              overlappingNodes.push(id);
             }
-            // if you hover over a node, the title of the edge is not supposed to be shown.
-            nodeUnderCursor = true;
           }
         }
+      }
+
+      if (overlappingNodes.length > 0) {
+        // if there are overlapping nodes, select the last one, this is the
+        // one which is drawn on top of the others
+        this.popupObj = this.nodes[overlappingNodes[overlappingNodes.length - 1]];
+        // if you hover over a node, the title of the edge is not supposed to be shown.
+        nodeUnderCursor = true;
       }
     }
 
     if (this.popupObj === undefined && nodeUnderCursor == false) {
       // search the edges for overlap
       var edges = this.edges;
+      var overlappingEdges = [];
       for (id in edges) {
         if (edges.hasOwnProperty(id)) {
           var edge = edges[id];
           if (edge.connected && (edge.getTitle() !== undefined) &&
               edge.isOverlappingWith(obj)) {
-            this.popupObj = edge;
-            break;
+            overlappingEdges.push(id);
           }
         }
+      }
+
+      if (overlappingEdges.length > 0) {
+        this.popupObj = this.edges[overlappingEdges[overlappingEdges.length - 1]];
       }
     }
 
@@ -18221,8 +18205,8 @@ return /******/ (function(modules) { // webpackBootstrap
       return;
     }
 
-    var fields = ['style','fontSize','fontFace','fontColor','fontFill','width',
-      'widthSelectionMultiplier','hoverWidth','arrowScaleFactor','dash','inheritColor'
+    var fields = ['style','fontSize','fontFace','fontColor','fontFill','fontStrokeWidth','fontStrokeColor','width',
+      'widthSelectionMultiplier','hoverWidth','arrowScaleFactor','dash','inheritColor','labelAlignment'
     ];
     util.selectiveDeepExtend(fields, this.options, properties);
 
@@ -18265,6 +18249,7 @@ return /******/ (function(modules) { // webpackBootstrap
       case 'dash-line':     this.draw = this._drawDashLine; break;
       default:              this.draw = this._drawLine; break;
     }
+    
   };
 
   /**
@@ -18468,168 +18453,176 @@ return /******/ (function(modules) { // webpackBootstrap
   };
 
   Edge.prototype._getViaCoordinates = function () {
-    var xVia = null;
-    var yVia = null;
-    var factor = this.options.smoothCurves.roundness;
-    var type = this.options.smoothCurves.type;
-
-    var dx = Math.abs(this.from.x - this.to.x);
-    var dy = Math.abs(this.from.y - this.to.y);
-    if (type == 'discrete' || type == 'diagonalCross') {
-      if (Math.abs(this.from.x - this.to.x) < Math.abs(this.from.y - this.to.y)) {
-        if (this.from.y > this.to.y) {
-          if (this.from.x < this.to.x) {
-            xVia = this.from.x + factor * dy;
-            yVia = this.from.y - factor * dy;
-          }
-          else if (this.from.x > this.to.x) {
-            xVia = this.from.x - factor * dy;
-            yVia = this.from.y - factor * dy;
-          }
-        }
-        else if (this.from.y < this.to.y) {
-          if (this.from.x < this.to.x) {
-            xVia = this.from.x + factor * dy;
-            yVia = this.from.y + factor * dy;
-          }
-          else if (this.from.x > this.to.x) {
-            xVia = this.from.x - factor * dy;
-            yVia = this.from.y + factor * dy;
-          }
-        }
-        if (type == "discrete") {
-          xVia = dx < factor * dy ? this.from.x : xVia;
-        }
-      }
-      else if (Math.abs(this.from.x - this.to.x) > Math.abs(this.from.y - this.to.y)) {
-        if (this.from.y > this.to.y) {
-          if (this.from.x < this.to.x) {
-            xVia = this.from.x + factor * dx;
-            yVia = this.from.y - factor * dx;
-          }
-          else if (this.from.x > this.to.x) {
-            xVia = this.from.x - factor * dx;
-            yVia = this.from.y - factor * dx;
-          }
-        }
-        else if (this.from.y < this.to.y) {
-          if (this.from.x < this.to.x) {
-            xVia = this.from.x + factor * dx;
-            yVia = this.from.y + factor * dx;
-          }
-          else if (this.from.x > this.to.x) {
-            xVia = this.from.x - factor * dx;
-            yVia = this.from.y + factor * dx;
-          }
-        }
-        if (type == "discrete") {
-          yVia = dy < factor * dx ? this.from.y : yVia;
-        }
-      }
+    if (this.options.smoothCurves.dynamic == true && this.options.smoothCurves.enabled == true ) {
+      return this.via;
     }
-    else if (type == "straightCross") {
-      if (Math.abs(this.from.x - this.to.x) < Math.abs(this.from.y - this.to.y)) {  // up - down
-        xVia = this.from.x;
-        if (this.from.y < this.to.y) {
-          yVia = this.to.y - (1-factor) * dy;
+    else if (this.options.smoothCurves.enabled == false) {
+      return {x:0,y:0};
+    }
+    else {
+      var xVia = null;
+      var yVia = null;
+      var factor = this.options.smoothCurves.roundness;
+      var type = this.options.smoothCurves.type;
+
+      var dx = Math.abs(this.from.x - this.to.x);
+      var dy = Math.abs(this.from.y - this.to.y);
+      if (type == 'discrete' || type == 'diagonalCross') {
+        if (Math.abs(this.from.x - this.to.x) < Math.abs(this.from.y - this.to.y)) {
+          if (this.from.y > this.to.y) {
+            if (this.from.x < this.to.x) {
+              xVia = this.from.x + factor * dy;
+              yVia = this.from.y - factor * dy;
+            }
+            else if (this.from.x > this.to.x) {
+              xVia = this.from.x - factor * dy;
+              yVia = this.from.y - factor * dy;
+            }
+          }
+          else if (this.from.y < this.to.y) {
+            if (this.from.x < this.to.x) {
+              xVia = this.from.x + factor * dy;
+              yVia = this.from.y + factor * dy;
+            }
+            else if (this.from.x > this.to.x) {
+              xVia = this.from.x - factor * dy;
+              yVia = this.from.y + factor * dy;
+            }
+          }
+          if (type == "discrete") {
+            xVia = dx < factor * dy ? this.from.x : xVia;
+          }
         }
-        else {
-          yVia = this.to.y + (1-factor) * dy;
+        else if (Math.abs(this.from.x - this.to.x) > Math.abs(this.from.y - this.to.y)) {
+          if (this.from.y > this.to.y) {
+            if (this.from.x < this.to.x) {
+              xVia = this.from.x + factor * dx;
+              yVia = this.from.y - factor * dx;
+            }
+            else if (this.from.x > this.to.x) {
+              xVia = this.from.x - factor * dx;
+              yVia = this.from.y - factor * dx;
+            }
+          }
+          else if (this.from.y < this.to.y) {
+            if (this.from.x < this.to.x) {
+              xVia = this.from.x + factor * dx;
+              yVia = this.from.y + factor * dx;
+            }
+            else if (this.from.x > this.to.x) {
+              xVia = this.from.x - factor * dx;
+              yVia = this.from.y + factor * dx;
+            }
+          }
+          if (type == "discrete") {
+            yVia = dy < factor * dx ? this.from.y : yVia;
+          }
         }
       }
-      else if (Math.abs(this.from.x - this.to.x) > Math.abs(this.from.y - this.to.y)) { // left - right
+      else if (type == "straightCross") {
+        if (Math.abs(this.from.x - this.to.x) < Math.abs(this.from.y - this.to.y)) {  // up - down
+          xVia = this.from.x;
+          if (this.from.y < this.to.y) {
+            yVia = this.to.y - (1 - factor) * dy;
+          }
+          else {
+            yVia = this.to.y + (1 - factor) * dy;
+          }
+        }
+        else if (Math.abs(this.from.x - this.to.x) > Math.abs(this.from.y - this.to.y)) { // left - right
+          if (this.from.x < this.to.x) {
+            xVia = this.to.x - (1 - factor) * dx;
+          }
+          else {
+            xVia = this.to.x + (1 - factor) * dx;
+          }
+          yVia = this.from.y;
+        }
+      }
+      else if (type == 'horizontal') {
         if (this.from.x < this.to.x) {
-          xVia = this.to.x - (1-factor) * dx;
+          xVia = this.to.x - (1 - factor) * dx;
         }
         else {
-          xVia = this.to.x + (1-factor) * dx;
+          xVia = this.to.x + (1 - factor) * dx;
         }
         yVia = this.from.y;
       }
-    }
-    else if (type == 'horizontal') {
-      if (this.from.x < this.to.x) {
-        xVia = this.to.x - (1-factor) * dx;
+      else if (type == 'vertical') {
+        xVia = this.from.x;
+        if (this.from.y < this.to.y) {
+          yVia = this.to.y - (1 - factor) * dy;
+        }
+        else {
+          yVia = this.to.y + (1 - factor) * dy;
+        }
       }
-      else {
-        xVia = this.to.x + (1-factor) * dx;
-      }
-      yVia = this.from.y;
-    }
-    else if (type == 'vertical') {
-      xVia = this.from.x;
-      if (this.from.y < this.to.y) {
-        yVia = this.to.y - (1-factor) * dy;
-      }
-      else {
-        yVia = this.to.y + (1-factor) * dy;
-      }
-    }
-    else { // continuous
-      if (Math.abs(this.from.x - this.to.x) < Math.abs(this.from.y - this.to.y)) {
-        if (this.from.y > this.to.y) {
-          if (this.from.x < this.to.x) {
+      else { // continuous
+        if (Math.abs(this.from.x - this.to.x) < Math.abs(this.from.y - this.to.y)) {
+          if (this.from.y > this.to.y) {
+            if (this.from.x < this.to.x) {
   //          console.log(1)
-            xVia = this.from.x + factor * dy;
-            yVia = this.from.y - factor * dy;
-            xVia = this.to.x < xVia ? this.to.x : xVia;
-          }
-          else if (this.from.x > this.to.x) {
+              xVia = this.from.x + factor * dy;
+              yVia = this.from.y - factor * dy;
+              xVia = this.to.x < xVia ? this.to.x : xVia;
+            }
+            else if (this.from.x > this.to.x) {
   //          console.log(2)
-            xVia = this.from.x - factor * dy;
-            yVia = this.from.y - factor * dy;
-            xVia = this.to.x > xVia ? this.to.x :xVia;
+              xVia = this.from.x - factor * dy;
+              yVia = this.from.y - factor * dy;
+              xVia = this.to.x > xVia ? this.to.x : xVia;
+            }
           }
-        }
-        else if (this.from.y < this.to.y) {
-          if (this.from.x < this.to.x) {
+          else if (this.from.y < this.to.y) {
+            if (this.from.x < this.to.x) {
   //          console.log(3)
-            xVia = this.from.x + factor * dy;
-            yVia = this.from.y + factor * dy;
-            xVia = this.to.x < xVia ? this.to.x : xVia;
-          }
-          else if (this.from.x > this.to.x) {
+              xVia = this.from.x + factor * dy;
+              yVia = this.from.y + factor * dy;
+              xVia = this.to.x < xVia ? this.to.x : xVia;
+            }
+            else if (this.from.x > this.to.x) {
   //          console.log(4, this.from.x, this.to.x)
-            xVia = this.from.x - factor * dy;
-            yVia = this.from.y + factor * dy;
-            xVia = this.to.x > xVia ? this.to.x : xVia;
+              xVia = this.from.x - factor * dy;
+              yVia = this.from.y + factor * dy;
+              xVia = this.to.x > xVia ? this.to.x : xVia;
+            }
           }
         }
-      }
-      else if (Math.abs(this.from.x - this.to.x) > Math.abs(this.from.y - this.to.y)) {
-        if (this.from.y > this.to.y) {
-          if (this.from.x < this.to.x) {
+        else if (Math.abs(this.from.x - this.to.x) > Math.abs(this.from.y - this.to.y)) {
+          if (this.from.y > this.to.y) {
+            if (this.from.x < this.to.x) {
   //          console.log(5)
-            xVia = this.from.x + factor * dx;
-            yVia = this.from.y - factor * dx;
-            yVia = this.to.y > yVia ? this.to.y : yVia;
-          }
-          else if (this.from.x > this.to.x) {
+              xVia = this.from.x + factor * dx;
+              yVia = this.from.y - factor * dx;
+              yVia = this.to.y > yVia ? this.to.y : yVia;
+            }
+            else if (this.from.x > this.to.x) {
   //          console.log(6)
-            xVia = this.from.x - factor * dx;
-            yVia = this.from.y - factor * dx;
-            yVia = this.to.y > yVia ? this.to.y : yVia;
+              xVia = this.from.x - factor * dx;
+              yVia = this.from.y - factor * dx;
+              yVia = this.to.y > yVia ? this.to.y : yVia;
+            }
           }
-        }
-        else if (this.from.y < this.to.y) {
-          if (this.from.x < this.to.x) {
+          else if (this.from.y < this.to.y) {
+            if (this.from.x < this.to.x) {
   //          console.log(7)
-            xVia = this.from.x + factor * dx;
-            yVia = this.from.y + factor * dx;
-            yVia = this.to.y < yVia ? this.to.y : yVia;
-          }
-          else if (this.from.x > this.to.x) {
+              xVia = this.from.x + factor * dx;
+              yVia = this.from.y + factor * dx;
+              yVia = this.to.y < yVia ? this.to.y : yVia;
+            }
+            else if (this.from.x > this.to.x) {
   //          console.log(8)
-            xVia = this.from.x - factor * dx;
-            yVia = this.from.y + factor * dx;
-            yVia = this.to.y < yVia ? this.to.y : yVia;
+              xVia = this.from.x - factor * dx;
+              yVia = this.from.y + factor * dx;
+              yVia = this.to.y < yVia ? this.to.y : yVia;
+            }
           }
         }
       }
+
+
+      return {x: xVia, y: yVia};
     }
-
-
-    return {x:xVia, y:yVia};
   };
 
   /**
@@ -18702,7 +18695,7 @@ return /******/ (function(modules) { // webpackBootstrap
       if (this.dirtyLabel == true) {
         var lines = String(text).split('\n');
         var lineCount = lines.length;
-        var fontSize = (Number(this.options.fontSize) + 4);
+        var fontSize = Number(this.options.fontSize);
         yLine = y + (1 - lineCount) / 2 * fontSize;
 
         var width = ctx.measureText(lines[0]).width;
@@ -18718,25 +18711,117 @@ return /******/ (function(modules) { // webpackBootstrap
         this.labelDimensions = {top:top,left:left,width:width,height:height,yLine:yLine};
       }
 
+  	var yLine = this.labelDimensions.yLine;
+  	
+  	ctx.save();
+  	
+  	if (this.options.labelAlignment != "horizontal"){
+  		ctx.translate(x, yLine);
+  		this._rotateForLabelAlignment(ctx);
+  		x = 0;
+  		yLine = 0;
+  	}
 
-      if (this.options.fontFill !== undefined && this.options.fontFill !== null && this.options.fontFill !== "none") {
-        ctx.fillStyle = this.options.fontFill;
-        ctx.fillRect(this.labelDimensions.left,
-          this.labelDimensions.top,
-          this.labelDimensions.width,
-          this.labelDimensions.height);
+  	
+  	this._drawLabelRect(ctx);
+  	this._drawLabelText(ctx,x,yLine, lines, lineCount, fontSize);
+  	
+  	ctx.restore();
+    }
+  };
+
+  /**
+   * Rotates the canvas so the text is most readable
+   * @param {CanvasRenderingContext2D} ctx
+   * @private
+   */
+  Edge.prototype._rotateForLabelAlignment = function(ctx) {
+  	var dy = this.from.y - this.to.y;
+  	var dx = this.from.x - this.to.x;
+  	var angleInDegrees = Math.atan2(dy, dx);
+
+  	// rotate so label it is readable
+  	if((angleInDegrees < -1 && dx < 0) || (angleInDegrees > 0 && dx < 0)){
+  		angleInDegrees = angleInDegrees + Math.PI;
+  	}
+  	
+  	ctx.rotate(angleInDegrees);
+  };
+
+  /**
+   * Draws the label rectangle 
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {String} labelAlignment
+   * @private
+   */
+  Edge.prototype._drawLabelRect = function(ctx) {
+  	if (this.options.fontFill !== undefined && this.options.fontFill !== null && this.options.fontFill !== "none") {
+  		ctx.fillStyle = this.options.fontFill;
+  		
+  		var lineMargin = 2;
+
+      if (this.options.labelAlignment == 'line-center') {
+        ctx.fillRect(-this.labelDimensions.width * 0.5, -this.labelDimensions.height * 0.5, this.labelDimensions.width, this.labelDimensions.height);
       }
-
-      // draw text
-      ctx.fillStyle = this.options.fontColor || "black";
-      ctx.textAlign = "center";
-      ctx.textBaseline =  "middle";
-      yLine = this.labelDimensions.yLine;
-      for (var i = 0; i < lineCount; i++) {
-        ctx.fillText(lines[i], x, yLine);
-        yLine += fontSize;
+      else if (this.options.labelAlignment == 'line-above') {
+        ctx.fillRect(-this.labelDimensions.width * 0.5, -(this.labelDimensions.height + lineMargin), this.labelDimensions.width, this.labelDimensions.height);
+      }
+      else if (this.options.labelAlignment == 'line-below') {
+        ctx.fillRect(-this.labelDimensions.width * 0.5, lineMargin, this.labelDimensions.width, this.labelDimensions.height);
+      }
+      else {
+        ctx.fillRect(this.labelDimensions.left, this.labelDimensions.top, this.labelDimensions.width, this.labelDimensions.height);
       }
     }
+  };
+
+  /**
+   * Draws the label text 
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {Number} x
+   * @param {Number} yLine
+   * @param {Array} lines
+   * @param {Number} lineCount
+   * @param {Number} fontSize
+   * @private
+   */
+  Edge.prototype._drawLabelText = function(ctx, x, yLine, lines, lineCount, fontSize) {
+  	// draw text
+  	ctx.fillStyle = this.options.fontColor || "black";
+  	ctx.textAlign = "center";
+
+    // check for label alignment
+    if (this.options.labelAlignment != 'horizontal') {
+      var lineMargin = 2;
+      if (this.options.labelAlignment == 'line-above') {
+        ctx.textBaseline = "alphabetic";
+        yLine -= 2 * lineMargin; // distance from edge, required because we use alphabetic. Alphabetic has less difference between browsers
+      }
+      else if (this.options.labelAlignment == 'line-below') {
+        ctx.textBaseline = "hanging";
+        yLine += 2 * lineMargin;// distance from edge, required because we use hanging. Hanging has less difference between browsers
+      }
+      else {
+        ctx.textBaseline = "middle";
+      }
+    }
+    else {
+      ctx.textBaseline = "middle";
+    }
+
+    // check for strokeWidth
+    if (this.options.fontStrokeWidth > 0){
+      ctx.lineWidth   = this.options.fontStrokeWidth;
+      ctx.strokeStyle = this.options.fontStrokeColor;
+      ctx.lineJoin    = 'round';
+    }
+  	for (var i = 0; i < lineCount; i++) {
+      if(this.options.fontStrokeWidth > 0){
+        ctx.strokeText(lines[i], x, yLine);
+      }
+  		ctx.fillText(lines[i], x, yLine);
+  		yLine += fontSize;
+  	}
   };
 
   /**
@@ -18755,7 +18840,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
     var via = null;
     // only firefox and chrome support this method, else we use the legacy one.
-    if (ctx.mozDash !== undefined || ctx.setLineDash !== undefined) {
+    if (ctx.setLineDash !== undefined) {
+      ctx.save();
       // configure the dash pattern
       var pattern = [0];
       if (this.options.dash.length !== undefined && this.options.dash.gap !== undefined) {
@@ -18766,27 +18852,16 @@ return /******/ (function(modules) { // webpackBootstrap
       }
 
       // set dash settings for chrome or firefox
-      if (typeof ctx.setLineDash !== 'undefined') { //Chrome
-        ctx.setLineDash(pattern);
-        ctx.lineDashOffset = 0;
-
-      } else { //Firefox
-        ctx.mozDash = pattern;
-        ctx.mozDashOffset = 0;
-      }
+      ctx.setLineDash(pattern);
+      ctx.lineDashOffset = 0;
 
       // draw the line
       via = this._line(ctx);
 
       // restore the dash settings.
-      if (typeof ctx.setLineDash !== 'undefined') { //Chrome
-        ctx.setLineDash([0]);
-        ctx.lineDashOffset = 0;
-
-      } else { //Firefox
-        ctx.mozDash = [0];
-        ctx.mozDashOffset = 0;
-      }
+      ctx.setLineDash([0]);
+      ctx.lineDashOffset = 0;
+      ctx.restore();
     }
     else { // unsupporting smooth lines
       // draw dashed line
@@ -18928,7 +19003,69 @@ return /******/ (function(modules) { // webpackBootstrap
     }
   };
 
+  Edge.prototype._pointOnBezier = function(t) {
+    var via = this._getViaCoordinates();
 
+    var x = Math.pow(1-t,2)*this.from.x + (2*t*(1 - t))*via.x + Math.pow(t,2)*this.to.x;
+    var y = Math.pow(1-t,2)*this.from.y + (2*t*(1 - t))*via.y + Math.pow(t,2)*this.to.y;
+
+    return {x:x,y:y};
+  }
+
+  /**
+   * This function uses binary search to look for the point where the bezier curve crosses the border of the node.
+   *
+   * @param from
+   * @param ctx
+   * @returns {*}
+   * @private
+   */
+  Edge.prototype._findBorderPosition = function(from,ctx) {
+    var maxIterations = 10;
+    var iteration = 0;
+    var low = 0;
+    var high = 1;
+    var pos,angle,distanceToBorder, distanceToNodes, difference;
+    var threshold = 0.2;
+    var node = this.to;
+    if (from == true) {
+      node = this.from;
+    }
+
+    while (low <= high && iteration < maxIterations) {
+      var middle = (low + high) * 0.5;
+
+      pos = this._pointOnBezier(middle);
+      angle = Math.atan2((node.y - pos.y), (node.x - pos.x));
+      distanceToBorder = node.distanceToBorder(ctx,angle);
+      distanceToNodes = Math.sqrt(Math.pow(pos.x-node.x,2) + Math.pow(pos.y-node.y,2));
+      difference = distanceToBorder - distanceToNodes;
+      if (Math.abs(difference) < threshold) {
+        break; // found
+      }
+      else if (difference < 0) { // distance to nodes is larger than distance to border --> t needs to be bigger if we're looking at the to node.
+        if (from == false) {
+          low = middle;
+        }
+        else {
+          high = middle;
+        }
+      }
+      else {
+        if (from == false) {
+          high = middle;
+        }
+        else {
+          low = middle;
+        }
+      }
+
+      iteration++;
+    }
+    pos.t = middle;
+
+    return pos;
+  };
 
   /**
    * Redraw a edge as a line with an arrow
@@ -18943,59 +19080,37 @@ return /******/ (function(modules) { // webpackBootstrap
     ctx.fillStyle = ctx.strokeStyle;
     ctx.lineWidth = this._getLineWidth();
 
-    var angle, length;
-    //draw a line
+    // set vars
+    var angle, length, arrowPos;
+
+    // if not connected to itself
     if (this.from != this.to) {
-      angle = Math.atan2((this.to.y - this.from.y), (this.to.x - this.from.x));
-      var dx = (this.to.x - this.from.x);
-      var dy = (this.to.y - this.from.y);
-      var edgeSegmentLength = Math.sqrt(dx * dx + dy * dy);
+      // draw line
+      this._line(ctx);
 
-      var fromBorderDist = this.from.distanceToBorder(ctx, angle + Math.PI);
-      var fromBorderPoint = (edgeSegmentLength - fromBorderDist) / edgeSegmentLength;
-      var xFrom = (fromBorderPoint) * this.from.x + (1 - fromBorderPoint) * this.to.x;
-      var yFrom = (fromBorderPoint) * this.from.y + (1 - fromBorderPoint) * this.to.y;
-
-      var via;
-      if (this.options.smoothCurves.dynamic == true && this.options.smoothCurves.enabled == true ) {
-        via = this.via;
-      }
-      else if (this.options.smoothCurves.enabled == true) {
-        via = this._getViaCoordinates();
-      }
-
-      if (this.options.smoothCurves.enabled == true && via.x != null) {
-        angle = Math.atan2((this.to.y - via.y), (this.to.x - via.x));
-        dx = (this.to.x - via.x);
-        dy = (this.to.y - via.y);
-        edgeSegmentLength = Math.sqrt(dx * dx + dy * dy);
-      }
-      var toBorderDist = this.to.distanceToBorder(ctx, angle);
-      var toBorderPoint = (edgeSegmentLength - toBorderDist) / edgeSegmentLength;
-
-      var xTo,yTo;
-      if (this.options.smoothCurves.enabled == true && via.x != null) {
-       xTo = (1 - toBorderPoint) * via.x + toBorderPoint * this.to.x;
-       yTo = (1 - toBorderPoint) * via.y + toBorderPoint * this.to.y;
+      // draw arrow head
+      if (this.options.smoothCurves.enabled == true) {
+        var via = this._getViaCoordinates();
+        arrowPos = this._findBorderPosition(false, ctx);
+        var guidePos = this._pointOnBezier(Math.max(0.0, arrowPos.t - 0.1))
+        angle = Math.atan2((arrowPos.y - guidePos.y), (arrowPos.x - guidePos.x));
       }
       else {
-        xTo = (1 - toBorderPoint) * this.from.x + toBorderPoint * this.to.x;
-        yTo = (1 - toBorderPoint) * this.from.y + toBorderPoint * this.to.y;
-      }
+        angle = Math.atan2((this.to.y - this.from.y), (this.to.x - this.from.x));
+        var dx = (this.to.x - this.from.x);
+        var dy = (this.to.y - this.from.y);
+        var edgeSegmentLength = Math.sqrt(dx * dx + dy * dy);
+        var toBorderDist = this.to.distanceToBorder(ctx, angle);
+        var toBorderPoint = (edgeSegmentLength - toBorderDist) / edgeSegmentLength;
 
-      ctx.beginPath();
-      ctx.moveTo(xFrom,yFrom);
-      if (this.options.smoothCurves.enabled == true && via.x != null) {
-        ctx.quadraticCurveTo(via.x,via.y,xTo, yTo);
+        arrowPos = {};
+        arrowPos.x = (1 - toBorderPoint) * this.from.x + toBorderPoint * this.to.x;
+        arrowPos.y = (1 - toBorderPoint) * this.from.y + toBorderPoint * this.to.y;
       }
-      else {
-        ctx.lineTo(xTo, yTo);
-      }
-      ctx.stroke();
 
       // draw arrow at the end of the line
       length = (10 + 5 * this.options.width) * this.options.arrowScaleFactor;
-      ctx.arrow(xTo, yTo, angle, length);
+      ctx.arrow(arrowPos.x,arrowPos.y, angle, length);
       ctx.fill();
       ctx.stroke();
 
@@ -19003,9 +19118,7 @@ return /******/ (function(modules) { // webpackBootstrap
       if (this.label) {
         var point;
         if (this.options.smoothCurves.enabled == true && via != null) {
-          var midpointX = 0.5*(0.5*(this.from.x + via.x) + 0.5*(this.to.x + via.x));
-          var midpointY = 0.5*(0.5*(this.from.y + via.y) + 0.5*(this.to.y + via.y));
-          point = {x:midpointX, y:midpointY};
+          point = this._pointOnBezier(0.5);
         }
         else {
           point = this._pointOnLine(0.5);
@@ -19057,8 +19170,6 @@ return /******/ (function(modules) { // webpackBootstrap
       }
     }
   };
-
-
 
   /**
    * Calculate the distance between a point (x3,y3) and a line segment from
@@ -19200,26 +19311,30 @@ return /******/ (function(modules) { // webpackBootstrap
         var nodeIdFrom = "edgeIdFrom:".concat(this.id);
         var nodeIdTo = "edgeIdTo:".concat(this.id);
         var constants = {
-                        nodes:{group:'', radius:8},
+                        nodes:{group:'', radius:7, borderWidth:2, borderWidthSelected: 2},
                         physics:{damping:0},
                         clustering: {maxNodeSizeIncrements: 0 ,nodeScaling: {width:0, height: 0, radius:0}}
                         };
         this.controlNodes.from = new Node(
           {id:nodeIdFrom,
             shape:'dot',
-              color:{background:'#ff4e00', border:'#3c3c3c', highlight: {background:'#07f968'}}
+              color:{background:'#ff0000', border:'#3c3c3c', highlight: {background:'#07f968'}}
           },{},{},constants);
         this.controlNodes.to = new Node(
           {id:nodeIdTo,
             shape:'dot',
-            color:{background:'#ff4e00', border:'#3c3c3c', highlight: {background:'#07f968'}}
+            color:{background:'#ff0000', border:'#3c3c3c', highlight: {background:'#07f968'}}
           },{},{},constants);
       }
 
-      if (this.controlNodes.from.selected == false && this.controlNodes.to.selected == false) {
-        this.controlNodes.positions = this.getControlNodePositions(ctx);
+      this.controlNodes.positions = {};
+      if (this.controlNodes.from.selected == false) {
+        this.controlNodes.positions.from = this.getControlNodeFromPosition(ctx);
         this.controlNodes.from.x = this.controlNodes.positions.from.x;
         this.controlNodes.from.y = this.controlNodes.positions.from.y;
+      }
+      if (this.controlNodes.to.selected == false) {
+        this.controlNodes.positions.to = this.getControlNodeToPosition(ctx);
         this.controlNodes.to.x = this.controlNodes.positions.to.x;
         this.controlNodes.to.y = this.controlNodes.positions.to.y;
       }
@@ -19311,46 +19426,56 @@ return /******/ (function(modules) { // webpackBootstrap
    * this calculates the position of the control nodes on the edges of the parent nodes.
    *
    * @param ctx
-   * @returns {{from: {x: number, y: number}, to: {x: *, y: *}}}
+   * @returns {x: *, y: *}
    */
-  Edge.prototype.getControlNodePositions = function(ctx) {
-    var angle = Math.atan2((this.to.y - this.from.y), (this.to.x - this.from.x));
-    var dx = (this.to.x - this.from.x);
-    var dy = (this.to.y - this.from.y);
-    var edgeSegmentLength = Math.sqrt(dx * dx + dy * dy);
-    var fromBorderDist = this.from.distanceToBorder(ctx, angle + Math.PI);
-    var fromBorderPoint = (edgeSegmentLength - fromBorderDist) / edgeSegmentLength;
-    var xFrom = (fromBorderPoint) * this.from.x + (1 - fromBorderPoint) * this.to.x;
-    var yFrom = (fromBorderPoint) * this.from.y + (1 - fromBorderPoint) * this.to.y;
-
-    var via;
-    if (this.options.smoothCurves.dynamic == true && this.options.smoothCurves.enabled == true) {
-      via = this.via;
-    }
-    else if (this.options.smoothCurves.enabled == true) {
-      via = this._getViaCoordinates();
-    }
-
-    if (this.options.smoothCurves.enabled == true && via.x != null) {
-      angle = Math.atan2((this.to.y - via.y), (this.to.x - via.x));
-      dx = (this.to.x - via.x);
-      dy = (this.to.y - via.y);
-      edgeSegmentLength = Math.sqrt(dx * dx + dy * dy);
-    }
-    var toBorderDist = this.to.distanceToBorder(ctx, angle);
-    var toBorderPoint = (edgeSegmentLength - toBorderDist) / edgeSegmentLength;
-
-    var xTo,yTo;
-    if (this.options.smoothCurves.enabled == true && via.x != null) {
-      xTo = (1 - toBorderPoint) * via.x + toBorderPoint * this.to.x;
-      yTo = (1 - toBorderPoint) * via.y + toBorderPoint * this.to.y;
+  Edge.prototype.getControlNodeFromPosition = function(ctx) {
+    // draw arrow head
+    var controlnodeFromPos;
+    if (this.options.smoothCurves.enabled == true) {
+      controlnodeFromPos = this._findBorderPosition(true, ctx);
     }
     else {
-      xTo = (1 - toBorderPoint) * this.from.x + toBorderPoint * this.to.x;
-      yTo = (1 - toBorderPoint) * this.from.y + toBorderPoint * this.to.y;
+      var angle = Math.atan2((this.to.y - this.from.y), (this.to.x - this.from.x));
+      var dx = (this.to.x - this.from.x);
+      var dy = (this.to.y - this.from.y);
+      var edgeSegmentLength = Math.sqrt(dx * dx + dy * dy);
+
+      var fromBorderDist = this.from.distanceToBorder(ctx, angle + Math.PI);
+      var fromBorderPoint = (edgeSegmentLength - fromBorderDist) / edgeSegmentLength;
+      controlnodeFromPos = {};
+      controlnodeFromPos.x = (fromBorderPoint) * this.from.x + (1 - fromBorderPoint) * this.to.x;
+      controlnodeFromPos.y = (fromBorderPoint) * this.from.y + (1 - fromBorderPoint) * this.to.y;
     }
 
-    return {from:{x:xFrom,y:yFrom},to:{x:xTo,y:yTo}};
+    return controlnodeFromPos;
+  };
+
+  /**
+   * this calculates the position of the control nodes on the edges of the parent nodes.
+   *
+   * @param ctx
+   * @returns {{from: {x: number, y: number}, to: {x: *, y: *}}}
+   */
+  Edge.prototype.getControlNodeToPosition = function(ctx) {
+    // draw arrow head
+    var controlnodeFromPos,controlnodeToPos;
+    if (this.options.smoothCurves.enabled == true) {
+      controlnodeToPos = this._findBorderPosition(false, ctx);
+    }
+    else {
+      var angle = Math.atan2((this.to.y - this.from.y), (this.to.x - this.from.x));
+      var dx = (this.to.x - this.from.x);
+      var dy = (this.to.y - this.from.y);
+      var edgeSegmentLength = Math.sqrt(dx * dx + dy * dy);
+      var toBorderDist = this.to.distanceToBorder(ctx, angle);
+      var toBorderPoint = (edgeSegmentLength - toBorderDist) / edgeSegmentLength;
+
+      controlnodeToPos = {};
+      controlnodeToPos.x = (1 - toBorderPoint) * this.from.x + toBorderPoint * this.to.x;
+      controlnodeToPos.y = (1 - toBorderPoint) * this.from.y + toBorderPoint * this.to.y;
+    }
+
+    return controlnodeToPos;
   };
 
   module.exports = Edge;
@@ -19451,6 +19576,7 @@ return /******/ (function(modules) { // webpackBootstrap
    */
   function Images() {
     this.images = {};
+    this.imageBroken = {};
     this.callback = undefined;
   }
 
@@ -19470,12 +19596,12 @@ return /******/ (function(modules) { // webpackBootstrap
    * @return {Image} img          The image object
    */
   Images.prototype.load = function(url, brokenUrl) {
-    if (this.images[url] == undefined) {
+    var img = this.images[url]; // make a pointer
+    if (img === undefined) {
       // create the image
       var me = this;
-      var img = new Image();
+      img = new Image();
       img.onload = function () {
-
         // IE11 fix -- thanks dponch!
         if (this.width == 0) {
           document.body.appendChild(this);
@@ -19498,8 +19624,16 @@ return /******/ (function(modules) { // webpackBootstrap
             me.callback(this);
           }
         }
+        else if (me.imageBroken[url] === true) {
+          console.error("Could not load brokenImage:", brokenUrl);
+          delete this.src;
+          if (me.callback) {
+            me.callback(this);
+          }
+        }
         else {
           this.src = brokenUrl;
+          me.imageBroken[url] = true;
         }
       };
 
@@ -19675,7 +19809,7 @@ return /******/ (function(modules) { // webpackBootstrap
     }
 
     var fields = ['borderWidth','borderWidthSelected','shape','image','brokenImage','radius','fontColor',
-      'fontSize','fontFace','fontFill','group','mass'
+      'fontSize','fontFace','fontFill','fontStrokeWidth','fontStrokeColor','group','mass'
     ];
     util.selectiveDeepExtend(fields, this.options, properties);
 
@@ -19703,9 +19837,6 @@ return /******/ (function(modules) { // webpackBootstrap
       util.deepExtend(this.options, groupObj);
       // the color object needs to be completely defined. Since groups can partially overwrite the colors, we parse it again, just in case.
       this.options.color = util.parseColor(this.options.color);
-    }
-    else if (properties.color === undefined) {
-      this.options.color = constants.nodes.color;
     }
 
     // individual shape properties
@@ -20078,7 +20209,6 @@ return /******/ (function(modules) { // webpackBootstrap
         this.growthIndicator = this.width - width;
       }
     }
-
   };
 
   Node.prototype._drawImageAtPosition = function (ctx) {
@@ -20101,16 +20231,21 @@ return /******/ (function(modules) { // webpackBootstrap
 
   Node.prototype._drawImageLabel = function (ctx) {
     var yLabel;
-    if (this.imageObj.width != 0 ) {
-      
-      yLabel = this.y + this.height / 2;
+    var offset = 0;
+    
+    if (this.height){
+      offset = this.height / 2;
+      var labelDimensions = this.getTextSize(ctx);
+        
+      if (labelDimensions.lineCount >= 1){
+        offset += labelDimensions.height / 2;
+        offset += 3;
+      }
     }
-    else {
-      // image still loading... just draw the label for now
-      yLabel = this.y;
-    }
+    
+    yLabel = this.y + offset;
 
-    this._label(ctx, this.label, this.x, yLabel, undefined, "top");
+    this._label(ctx, this.label, this.x, yLabel, undefined);
   };
 
   Node.prototype._drawImage = function (ctx) {
@@ -20132,7 +20267,29 @@ return /******/ (function(modules) { // webpackBootstrap
   };
 
   Node.prototype._resizeCircularImage = function (ctx) {
-    this._resizeImage(ctx);
+    if(!this.imageObj.src || !this.imageObj.width || !this.imageObj.height){
+      if (!this.width) {
+        var diameter = this.options.radius * 2;
+        this.width = diameter;
+        this.height = diameter;
+
+        // scaling used for clustering
+        //this.width  += Math.min(this.clusterSize - 1, this.maxNodeSizeIncrements) * 0.5 * this.clusterSizeWidthFactor;
+        //this.height += Math.min(this.clusterSize - 1, this.maxNodeSizeIncrements) * 0.5 * this.clusterSizeHeightFactor;
+        this.options.radius += Math.min(this.clusterSize - 1, this.maxNodeSizeIncrements) * 0.5 * this.clusterSizeRadiusFactor;
+        this.growthIndicator = this.options.radius- 0.5*diameter;
+        this._swapToImageResizeWhenImageLoaded = true;
+      }
+    }
+    else {
+      if (this._swapToImageResizeWhenImageLoaded) {
+        this.width = 0;
+        this.height = 0;
+        delete this._swapToImageResizeWhenImageLoaded;
+      }
+      this._resizeImage(ctx);
+    }
+
   };
 
   Node.prototype._drawCircularImage = function (ctx) {
@@ -20473,7 +20630,7 @@ return /******/ (function(modules) { // webpackBootstrap
     this.boundingBox.bottom = this.y + this.options.radius;
 
     if (this.label) {
-      this._label(ctx, this.label, this.x, this.y + this.height / 2, undefined, 'top',true);
+      this._label(ctx, this.label, this.x, this.y + this.height / 2, undefined, 'hanging',true);
       this.boundingBox.left = Math.min(this.boundingBox.left, this.labelDimensions.left);
       this.boundingBox.right = Math.max(this.boundingBox.right, this.labelDimensions.left + this.labelDimensions.width);
       this.boundingBox.bottom = Math.max(this.boundingBox.bottom, this.boundingBox.bottom + this.labelDimensions.height);
@@ -20515,7 +20672,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
       var lines = text.split('\n');
       var lineCount = lines.length;
-      var fontSize = (Number(this.options.fontSize) + 4); // TODO: why is this +4 ?
+      var fontSize = Number(this.options.fontSize);
       var yLine = y + (1 - lineCount) / 2 * fontSize;
       if (labelUnderNode == true) {
         yLine = y + (1 - lineCount) / (2 * fontSize);
@@ -20530,8 +20687,10 @@ return /******/ (function(modules) { // webpackBootstrap
       var height = this.options.fontSize * lineCount;
       var left = x - width / 2;
       var top = y - height / 2;
-      if (baseline == "top") {
+      if (baseline == "hanging") {
         top += 0.5 * fontSize;
+        top += 4;   // distance from node, required because we use hanging. Hanging has less difference between browsers
+        yLine += 4; // distance from node
       }
       this.labelDimensions = {top:top,left:left,width:width,height:height,yLine:yLine};
 
@@ -20545,7 +20704,15 @@ return /******/ (function(modules) { // webpackBootstrap
       ctx.fillStyle = this.options.fontColor || "black";
       ctx.textAlign = align || "center";
       ctx.textBaseline = baseline || "middle";
+      if (this.options.fontStrokeWidth > 0){
+        ctx.lineWidth   = this.options.fontStrokeWidth;
+        ctx.strokeStyle = this.options.fontStrokeColor;
+        ctx.lineJoin    = 'round';
+      }
       for (var i = 0; i < lineCount; i++) {
+        if(this.options.fontStrokeWidth){
+          ctx.strokeText(lines[i], x, yLine);
+        }
         ctx.fillText(lines[i], x, yLine);
         yLine += fontSize;
       }
@@ -20565,10 +20732,10 @@ return /******/ (function(modules) { // webpackBootstrap
         width = Math.max(width, ctx.measureText(lines[i]).width);
       }
 
-      return {"width": width, "height": height};
+      return {"width": width, "height": height, lineCount: lines.length};
     }
     else {
-      return {"width": 0, "height": 0};
+      return {"width": 0, "height": 0, lineCount: 0};
     }
   };
 
@@ -22343,8 +22510,7 @@ return /******/ (function(modules) { // webpackBootstrap
         this.redraw();
       }
       else {
-        console.log('WARNING: infinite loop in redraw?')
-        throw new Error("bla")
+        console.log('WARNING: infinite loop in redraw?');
       }
       this.redrawCount = 0;
     }
@@ -31812,15 +31978,14 @@ return /******/ (function(modules) { // webpackBootstrap
    * @private
    */
   exports._clearManipulatorBar = function() {
-    while (this.manipulationDiv.hasChildNodes()) {
-      this.manipulationDiv.removeChild(this.manipulationDiv.firstChild);
-    }
+    this._recursiveDOMDelete(this.manipulationDiv);
     this.manipulationDOM = {};
 
     this._manipulationReleaseOverload = function () {};
     delete this.sectors['support']['nodes']['targetNode'];
     delete this.sectors['support']['nodes']['targetViaNode'];
     this.controlNodesActive = false;
+    this.freezeSimulation = false;
   };
 
   /**
@@ -31834,6 +31999,7 @@ return /******/ (function(modules) { // webpackBootstrap
     for (var functionName in this.cachedFunctions) {
       if (this.cachedFunctions.hasOwnProperty(functionName)) {
         this[functionName] = this.cachedFunctions[functionName];
+        delete this.cachedFunctions[functionName];
       }
     }
   };
@@ -31979,7 +32145,8 @@ return /******/ (function(modules) { // webpackBootstrap
       }
       this.closeDiv.onclick = this._toggleEditMode.bind(this);
 
-      this.boundFunction = this._createManipulatorBar.bind(this);
+      var me = this;
+      this.boundFunction = me._createManipulatorBar;
       this.on('select', this.boundFunction);
     }
     else {
@@ -32042,7 +32209,8 @@ return /******/ (function(modules) { // webpackBootstrap
     this.manipulationDOM['backSpan'].onclick = this._createManipulatorBar.bind(this);
 
     // we use the boundFunction so we can reference it when we unbind it from the "select" event.
-    this.boundFunction = this._addNode.bind(this);
+    var me = this;
+    this.boundFunction = me._addNode;
     this.on('select', this.boundFunction);
   };
 
@@ -32058,11 +32226,11 @@ return /******/ (function(modules) { // webpackBootstrap
     this._unselectAll(true);
     this.freezeSimulation = true;
 
-    var locale = this.constants.locales[this.constants.locale];
-
     if (this.boundFunction) {
       this.off('select', this.boundFunction);
     }
+
+    var locale = this.constants.locales[this.constants.locale];
 
     this._unselectAll();
     this.forceAppendSelection = false;
@@ -32094,7 +32262,8 @@ return /******/ (function(modules) { // webpackBootstrap
     this.manipulationDOM['backSpan'].onclick = this._createManipulatorBar.bind(this);
 
     // we use the boundFunction so we can reference it when we unbind it from the "select" event.
-    this.boundFunction = this._handleConnect.bind(this);
+    var me = this;
+    this.boundFunction = me._handleConnect;
     this.on('select', this.boundFunction);
 
     // temporarily overload functions
@@ -32205,14 +32374,22 @@ return /******/ (function(modules) { // webpackBootstrap
     this._redraw();
   };
 
+
+  /**
+   *
+   * @param pointer
+   * @private
+   */
   exports._releaseControlNode = function(pointer) {
     var newNode = this._getNodeAt(pointer);
     if (newNode !== null) {
       if (this.edgeBeingEdited.controlNodes.from.selected == true) {
+        this.edgeBeingEdited._restoreControlNodes();
         this._editEdge(newNode.id, this.edgeBeingEdited.to.id);
         this.edgeBeingEdited.controlNodes.from.unselect();
       }
       if (this.edgeBeingEdited.controlNodes.to.selected == true) {
+        this.edgeBeingEdited._restoreControlNodes();
         this._editEdge(this.edgeBeingEdited.from.id, newNode.id);
         this.edgeBeingEdited.controlNodes.to.unselect();
       }
@@ -32688,23 +32865,6 @@ return /******/ (function(modules) { // webpackBootstrap
    */
   exports._setupHierarchicalLayout = function() {
     if (this.constants.hierarchicalLayout.enabled == true && this.nodeIndices.length > 0) {
-      if (this.constants.hierarchicalLayout.direction == "RL" || this.constants.hierarchicalLayout.direction == "DU") {
-        this.constants.hierarchicalLayout.levelSeparation = this.constants.hierarchicalLayout.levelSeparation < 0 ? this.constants.hierarchicalLayout.levelSeparation : this.constants.hierarchicalLayout.levelSeparation * -1;
-      }
-      else {
-        this.constants.hierarchicalLayout.levelSeparation = Math.abs(this.constants.hierarchicalLayout.levelSeparation);
-      }
-
-      if (this.constants.hierarchicalLayout.direction == "RL" || this.constants.hierarchicalLayout.direction == "LR") {
-        if (this.constants.smoothCurves.enabled == true) {
-          this.constants.smoothCurves.type = "vertical";
-        }
-      }
-      else {
-        if (this.constants.smoothCurves.enabled == true) {
-          this.constants.smoothCurves.type = "horizontal";
-        }
-      }
       // get the size of the largest hubs and check if the user has defined a level for a node.
       var hubsize = 0;
       var node, nodeId;
@@ -32744,7 +32904,7 @@ return /******/ (function(modules) { // webpackBootstrap
             this._determineLevels(hubsize);
           }
           else {
-            this._determineLevelsDirected();
+            this._determineLevelsDirected(false);
           }
 
         }
@@ -32888,36 +33048,24 @@ return /******/ (function(modules) { // webpackBootstrap
     }
   };
 
+
+
   /**
-   * this function allocates nodes in levels based on the recursive branching from the largest hubs.
+   * this function allocates nodes in levels based on the direction of the edges
    *
    * @param hubsize
    * @private
    */
   exports._determineLevelsDirected = function() {
-    var nodeId, node;
+    var nodeId, node, firstNode;
+    var minLevel = 10000;
 
     // set first node to source
-    for (nodeId in this.nodes) {
-      if (this.nodes.hasOwnProperty(nodeId)) {
-        this.nodes[nodeId].level = 10000;
-        break;
-      }
-    }
+    firstNode = this.nodes[this.nodeIndices[0]];
+    firstNode.level = minLevel;
+    this._setLevelDirected(minLevel,firstNode.edges,firstNode.id);
 
-    // branch from hubs
-    for (nodeId in this.nodes) {
-      if (this.nodes.hasOwnProperty(nodeId)) {
-        node = this.nodes[nodeId];
-        if (node.level == 10000) {
-          this._setLevelDirected(10000,node.edges,node.id);
-        }
-      }
-    }
-
-
-    // branch from hubs
-    var minLevel = 10000;
+    // get the minimum level
     for (nodeId in this.nodes) {
       if (this.nodes.hasOwnProperty(nodeId)) {
         node = this.nodes[nodeId];
@@ -32925,7 +33073,7 @@ return /******/ (function(modules) { // webpackBootstrap
       }
     }
 
-    // branch from hubs
+    // subtract the minimum from the set so we have a range starting from 0
     for (nodeId in this.nodes) {
       if (this.nodes.hasOwnProperty(nodeId)) {
         node = this.nodes[nodeId];
@@ -32953,6 +33101,23 @@ return /******/ (function(modules) { // webpackBootstrap
       this.constants.smoothCurves.dynamic = false;
     }
     this._configureSmoothCurves();
+
+    var config = this.constants.hierarchicalLayout;
+    config.levelSeparation = Math.abs(config.levelSeparation);
+    if (config.direction == "RL" || config.direction == "DU") {
+      config.levelSeparation *= -1;
+    }
+
+    if (config.direction == "RL" || config.direction == "LR") {
+      if (this.constants.smoothCurves.enabled == true) {
+        this.constants.smoothCurves.type = "vertical";
+      }
+    }
+    else {
+      if (this.constants.smoothCurves.enabled == true) {
+        this.constants.smoothCurves.type = "horizontal";
+      }
+    }
   };
 
 
@@ -33031,7 +33196,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
   /**
-   * this function is called recursively to enumerate the barnches of the largest hubs and give each node a level.
+   * this function is called recursively to enumerate the branched of the first node and give each node a level based on edge direction
    *
    * @param level
    * @param edges
@@ -33040,9 +33205,9 @@ return /******/ (function(modules) { // webpackBootstrap
    */
   exports._setLevelDirected = function(level, edges, parentId) {
     this.nodes[parentId].hierarchyEnumerated = true;
+    var childNode, direction;
     for (var i = 0; i < edges.length; i++) {
-      var childNode = null;
-      var direction = 1;
+      direction = 1;
       if (edges[i].toId == parentId) {
         childNode = edges[i].from;
         direction = -1;
@@ -33056,9 +33221,9 @@ return /******/ (function(modules) { // webpackBootstrap
     }
 
     for (var i = 0; i < edges.length; i++) {
-      var childNode = null;
       if (edges[i].toId == parentId) {childNode = edges[i].from;}
       else {childNode = edges[i].to;}
+
       if (childNode.edges.length > 1 && childNode.hierarchyEnumerated === false) {
         this._setLevelDirected(childNode.level, childNode.edges, childNode.id);
       }
@@ -33858,6 +34023,12 @@ return /******/ (function(modules) { // webpackBootstrap
         dy = node2.y - node1.y;
         distance = Math.sqrt(dx * dx + dy * dy);
 
+        // same condition as BarnesHut, making sure nodes are never 100% overlapping.
+        if (distance == 0) {
+          distance = 0.1*Math.random();
+          dx = distance;
+        }
+
         minimumDistance = (combinedClusterSize == 0) ? nodeDistance : (nodeDistance * (1 + combinedClusterSize * this.constants.clustering.distanceAmplification));
         var a = a_base / minimumDistance;
         if (distance < 2 * minimumDistance) {
@@ -33867,13 +34038,13 @@ return /******/ (function(modules) { // webpackBootstrap
           else {
             repulsingForce = a * distance + b; // linear approx of  1 / (1 + Math.exp((distance / minimumDistance - 1) * steepness))
           }
+
           // amplify the repulsion for clusters.
           repulsingForce *= (combinedClusterSize == 0) ? 1 : 1 + combinedClusterSize * this.constants.clustering.forceAmplification;
           repulsingForce = repulsingForce / Math.max(distance,0.01*minimumDistance);
 
           fx = dx * repulsingForce;
           fy = dy * repulsingForce;
-
           node1.fx -= fx;
           node1.fy -= fy;
           node2.fx += fx;

@@ -5,7 +5,7 @@
 Contao Extension: vis.js
 ========================
 
-Integrate vis.js (version 3.8.0), the dynamic, browser based visualization library, into Contao.
+Integrate vis.js (version 3.9.0), the dynamic, browser based visualization library, into Contao.
 
 For more infos see: http://visjs.org
 
