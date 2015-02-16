@@ -13,9 +13,7 @@ For more infos see: http://visjs.org
 Installation
 ------------
 
-The extension is not published in contao extension repository.
-
-Install it manually or via composer: [cliffparnitzky/vis.js](https://packagist.org/packages/cliffparnitzky/vis.js).
+Install the extension via composer: [cliffparnitzky/vis.js](https://packagist.org/packages/cliffparnitzky/vis.js).
 
 If you prefer to install it manually, download the latest release here: https://github.com/cliffparnitzky/vis.js/releases
 
@@ -29,8 +27,8 @@ https://github.com/cliffparnitzky/vis.js/issues
 Compatibility
 -------------
 
-- min. version: Contao 3.0.0
-- max. version: Contao 3.4.x
+- min. Contao version: >= 3.2.0
+- max. Contao version: <  3.5.0
 
 
 Dependency
