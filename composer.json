@@ -1,6 +1,6 @@
 {
 	"name":"cliffparnitzky/vis.js",
-	"description":"Integrate vis.js (version 3.10.0), the dynamic, browser based visualization library, into Contao.",
+	"description":"Integrate vis.js (version 3.11.0), the dynamic, browser based visualization library, into Contao.",
 	"keywords":["contao", "vis.js", "diagram", "chart", "timeline"],
 	"type":"contao-module",
 	"license":"LGPL-3.0+",
