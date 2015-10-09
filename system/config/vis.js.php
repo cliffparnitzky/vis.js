@@ -13,6 +13,6 @@
 /**
  * Plugin version
  */
-define('VIS_JS', '4.7.0');
+define('VIS_JS', '4.8.2');
 
 ?>
